@@ -90,10 +90,7 @@ const newCollectionScheme = new Schema({
     type: String,
     default: 'None',
   },
-  id_clothes: {
-    type: Array,
-    default: [],
-  },
+  id_clothes: [{ type: Schema.Types.ObjectId, ref: 'Clothes' }],
 });
 
 const UserSchema = new Schema({
@@ -184,9 +181,10 @@ app.get('/clothes', function (req, res) {
   for (i = 1; i < 100; i++) {
     console.log('---------------------------------------------');
   }
+
   const filt = req.query;
-  let desArray = filt.des.split(',');
-  let colArray = filt.color.split(',');
+  let desArray = filt.des;
+  let colArray = filt.color;
 
   console.log(filt);
   console.log(desArray);
@@ -217,7 +215,7 @@ app.get('/clothes', function (req, res) {
           },
           designer: filt.des === 'None' ? { $ne: '' } : { $in: desArray },
           color: filt.color === 'None' ? { $ne: '' } : { $in: colArray },
-          gender: filt.gender,
+          gender: filt.gender === 'all' ? { $ne: '' } : filt.gender,
         },
         function (err, item) {
           // console.log(item);
@@ -257,7 +255,7 @@ app.get('/clothes', function (req, res) {
           sizes: { $in: filtSizeArr },
           designer: filt.des === 'None' ? { $ne: '' } : { $in: desArray },
           color: filt.color === 'None' ? { $ne: '' } : { $in: colArray },
-          gender: filt.gender,
+          gender: filt.gender === 'all' ? { $ne: '' } : filt.gender,
         },
         function (err, item) {
           // console.log(item);
@@ -540,7 +538,33 @@ app.post('/createCollection', function (req, res) {
       });
     });
 });
+app.get('/getCollection', async function (req, res) {
+  // let arrCollect = [];
+  // console.log('arrCollect');
+  // console.log(arrCollect);
+  let movie = await NewCollection.find({}).populate('id_clothes');
+  console.log(movie);
+  console.log(movie[0].id_clothes);
+  res.send({ clothes: movie[0].id_clothes, name: movie[0].name, desc: movie[0].description });
+});
+app.post('/deleteItem', function (req, res) {
+  console.log(req.body);
 
+  Clothes.findByIdAndDelete({ _id: req.body._id })
+    .then(() => {
+      cloudinary.uploader.destroy(`clothes/${req.body.url}`, function (result) {});
+      res.status(200).send({
+        message: 'Товар удалён',
+      });
+    })
+    .catch((error) => {
+      console.log(error);
+      res.status(500).send({
+        message: 'Не удалось удалить товар',
+        error,
+      });
+    });
+});
 app.listen(3001, () => {
   console.log('server is running');
 });
